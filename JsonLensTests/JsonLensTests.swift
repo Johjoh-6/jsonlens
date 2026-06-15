@@ -2,7 +2,7 @@
 //  JsonLensTests.swift
 //  JsonLensTests
 //
-//  Created by Six Johann François hervé on 10/06/2026.
+//  Created by Six Johann on 10/06/2026.
 //
 
 import Testing
