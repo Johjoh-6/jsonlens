@@ -6,136 +6,71 @@
 //
 
 import Foundation
-import SwiftUI
 internal import Combine
 
-
-/// Manages JSON parsing and tree state
-@MainActor
+/// Wraps one pane of editable JSON text. Compare uses two instances of this;
+/// every other tool shares one via `AppViewModel`.
 final class JSONEditorViewModel: ObservableObject {
+    @Published var text: String {
+        didSet { reparse() }
+    }
+    @Published private(set) var parseResult: Result<JSONValue, JSONParseError>?
 
-    // MARK: - Published State
-
-    /// Raw JSON entered by the user
-    @Published var jsonString: String = "{}" {
-        didSet {
-            parseJSON()
-        }
+    init(text: String = "") {
+        self.text = text
+        reparse()
     }
 
-    /// Parsed JSON tree
-    @Published private(set) var jsonTree: [JSONNode] = []
-
-    /// Whether the current JSON is valid
-    @Published private(set) var isValidJSON: Bool = true
-
-    /// Parsing error, if any
-    @Published private(set) var errorMessage: String?
-
-    /// Currently selected node
-    @Published var selectedNode: JSONNode? = nil
-
-    // MARK: - Initialization
-
-    init() {
-        parseJSON()
+    var lineCount: Int {
+        guard !text.isEmpty else { return 1 }
+        return text.reduce(1) { count, ch in ch == "\n" ? count + 1 : count }
     }
 
-    // MARK: - Parsing
+    var characterCount: Int { text.count }
 
-    /// Parses the current JSON string into a tree structure
-    func parseJSON() {
-
-        let normalizedJSON = normalizeQuotes(in: jsonString)
-
-        guard let data = normalizedJSON.data(using: .utf8) else {
-            isValidJSON = false
-            errorMessage = "Invalid UTF-8 encoding"
-            jsonTree = []
-            return
-        }
-
-        do {
-            let jsonObject = try JSONSerialization.jsonObject(with: data)
-
-            jsonTree = JSONParser.buildTree(from: jsonObject)
-            isValidJSON = true
-            errorMessage = nil
-
-        } catch {
-            isValidJSON = false
-            errorMessage = error.localizedDescription
-            jsonTree = []
-        }
-    }
-
-    // MARK: - Formatting
-
-    /// Pretty prints the current JSON if valid
-    func formatJSON() {
-
-        let normalizedJSON = normalizeQuotes(in: jsonString)
-
-        guard let data = normalizedJSON.data(using: .utf8) else {
-            print("Format failed: Invalid UTF-8")
-            return
-        }
-
-        do {
-            let jsonObject = try JSONSerialization.jsonObject(with: data)
-
-            let formattedData = try JSONSerialization.data(
-                withJSONObject: jsonObject,
-                options: [.prettyPrinted]
-            )
-
-            guard let formattedString = String(
-                data: formattedData,
-                encoding: .utf8
-            ) else {
-                print("Format failed: Could not create string")
-                return
-            }
-
-            
-            jsonString = formattedString
-            
-
-        } catch {
-            print("Format failed: \(error.localizedDescription)")
-            errorMessage = "Cannot format: \(error.localizedDescription)"
-        }
-    }
-
-    // MARK: - Tree Navigation
-
-    /// Finds a node using its path
-    func findNode(byPath path: String) -> JSONNode? {
-
-        var stack = jsonTree
-
-        while let node = stack.popLast() {
-
-            if node.path == path {
-                return node
-            }
-
-            if let children = node.children {
-                stack.append(contentsOf: children)
-            }
-        }
-
+    var parsedValue: JSONValue? {
+        if case .success(let value) = parseResult { return value }
         return nil
     }
 
-    // MARK: - Helpers
+    var error: JSONParseError? {
+        if case .failure(let err) = parseResult { return err }
+        return nil
+    }
 
-    /// Replaces smart quotes with standard quotes for JSON parsing.
-    private func normalizeQuotes(in text: String) -> String {
-        text
-            .replacingOccurrences(of: "\u{201C}", with: "\"") // “
-            .replacingOccurrences(of: "\u{201D}", with: "\"") // ”
-            .replacingOccurrences(of: "\u{2018}", with: "'")  // ‘
-            .replacingOccurrences(of: "\u{2019}", with: "'")  // ’
+    func loadSample() {
+        text = """
+        {
+          "name": "Ada Lovelace",
+          "born": 1815,
+          "isProgrammer": true,
+          "skills": ["mathematics", "analytical engines"],
+          "address": {
+            "city": "London",
+            "country": "England"
+          },
+          "notes": null
+        }
+        """
+    }
+
+    func format() {
+        guard let value = parsedValue else { return }
+        text = JSONPrettyPrinter.print(value)
+    }
+
+    func minify() {
+        guard let value = parsedValue else { return }
+        text = JSONMinifier.minify(value)
+    }
+
+    var stats: JSONStats { JSONStats.compute(text: text, value: parsedValue) }
+
+    private func reparse() {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            parseResult = nil
+            return
+        }
+        parseResult = JSONParser.parse(text)
     }
 }
