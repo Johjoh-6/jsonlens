@@ -1,9 +1,8 @@
 //
-//  LineNumberTextView.swift
+//  LineNumberRulerView.swift
 //  JsonLens
 //
-//  Created by Six Johann  on 08/07/2026.
-//
+//  Created by Six Johann  on 09/07/2026.
 
 import SwiftUI
 import AppKit
@@ -74,79 +73,6 @@ final class LineNumberRulerView: NSRulerView {
             if lineRange.location + lineRange.length >= content.length { break }
             index = lineRange.location + lineRange.length
             lineNumber += 1
-        }
-    }
-}
-
-/// SwiftUI wrapper exposing a plain-text, monospaced, line-numbered editor.
-struct LineNumberTextView: NSViewRepresentable {
-
-    @Binding var text: String
-    var errorLine: Int? = nil
-    var isEditable: Bool = true
-    var fontSize: CGFloat = 12
-
-    func makeNSView(context: Context) -> NSScrollView {
-        let textView = NSTextView()
-        textView.delegate = context.coordinator
-        textView.isRichText = false
-        textView.isEditable = isEditable
-        textView.isAutomaticQuoteSubstitutionEnabled = false
-        textView.isAutomaticDashSubstitutionEnabled = false
-        textView.isAutomaticSpellingCorrectionEnabled = false
-        textView.font = .monospacedSystemFont(ofSize: fontSize, weight: .regular)
-        textView.textContainerInset = NSSize(width: 6, height: 8)
-        textView.autoresizingMask = [.width]
-        textView.string = text
-
-        let scrollView = NSScrollView()
-        scrollView.documentView = textView
-        scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = false
-
-        let ruler = LineNumberRulerView(textView: textView)
-        scrollView.verticalRulerView = ruler
-        scrollView.hasVerticalRuler = true
-        scrollView.rulersVisible = true
-
-        context.coordinator.textView = textView
-        context.coordinator.rulerView = ruler
-        return scrollView
-    }
-
-    func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        guard let textView = context.coordinator.textView else { return }
-        if textView.string != text {
-            textView.string = text
-        }
-        if textView.font?.pointSize != fontSize {
-            textView.font = .monospacedSystemFont(ofSize: fontSize, weight: .regular)
-        }
-        context.coordinator.rulerView?.errorLine = errorLine
-        context.coordinator.rulerView?.needsDisplay = true
-        textView.isEditable = isEditable
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
-
-    final class Coordinator: NSObject, NSTextViewDelegate {
-        var text: Binding<String>
-        weak var textView: NSTextView?
-        weak var rulerView: LineNumberRulerView?
-
-        init(text: Binding<String>) { self.text = text }
-
-        func textDidChange(_ notification: Notification) {
-            guard let tv = notification.object as? NSTextView else { return }
-            let newValue = tv.string
-            // Defer the @Published write to the next run loop turn. NSTextView calls this
-            // delegate method synchronously while typing, which can land on the same cycle
-            // as a SwiftUI view update already in progress — writing straight into the
-            // binding here is what triggers "Publishing changes from within view updates".
-            DispatchQueue.main.async { [weak self] in
-                self?.text.wrappedValue = newValue
-                self?.rulerView?.needsDisplay = true
-            }
         }
     }
 }

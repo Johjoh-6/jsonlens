@@ -13,6 +13,15 @@ import SwiftData
 /// or the saved-snippets list for History.
 struct EditorColumnView: View {
     @ObservedObject var appViewModel: AppViewModel
+    @Environment(\.modelContext) private var modelContext
+
+    private enum ComparePane: Hashable { case left, right }
+    @State private var activeComparePane: ComparePane = .left
+
+    @State private var showingInfoPopover = false
+    @State private var showingSaveAlert = false
+    @State private var snippetName = ""
+    @State private var showingCopyConfirmation = false
 
     var body: some View {
         Group {
@@ -23,45 +32,15 @@ struct EditorColumnView: View {
                 SettingsFeatureView(appViewModel: appViewModel)
             case .compare:
                 HSplitView {
-                    JSONEditorPane(title: "Left JSON", viewModel: appViewModel.compareLeft)
-                    JSONEditorPane(title: "Right JSON", viewModel: appViewModel.compareRight)
+                    JSONEditorPane(label: "Left", viewModel: appViewModel.compareLeft)
+                    JSONEditorPane(label: "Right", viewModel: appViewModel.compareRight)
                 }
             case .visualize, .generateType, .validate:
-                JSONEditorPane(title: "JSON Input", viewModel: appViewModel.document)
+                JSONEditorPane(label: nil, viewModel: appViewModel.document)
             }
         }
         .navigationTitle(appViewModel.selectedTool.title)
-    }
-}
-
-/// A single labeled editor pane: line-numbered text view, a toolbar (format / minify /
-/// copy / save to history / info), and a compact status strip.
-struct JSONEditorPane: View {
-    let title: String
-    @ObservedObject var viewModel: JSONEditorViewModel
-
-    @Environment(\.modelContext) private var modelContext
-    @AppStorage("editorFontSize") private var editorFontSize: Double = 12
-    @State private var showingInfoPopover = false
-    @State private var showingSaveAlert = false
-    @State private var snippetName = ""
-    @State private var showingCopyConfirmation = false
-
-    var body: some View {
-        VStack(spacing: 0) {
-            header
-                .frame(height: 36)
-                .background(.bar)
-                .layoutPriority(1)
-            Divider()
-            LineNumberTextView(text: $viewModel.text, errorLine: viewModel.error?.line, fontSize: CGFloat(editorFontSize))
-                .frame(minWidth: 320, minHeight: 120)
-            Divider()
-            statusBar
-                .frame(height: 28)
-                .background(.bar)
-                .layoutPriority(1)
-        }
+        .toolbar { toolbarContent }
         .alert("Save to History", isPresented: $showingSaveAlert) {
             TextField("Name", text: $snippetName)
             Button("Cancel", role: .cancel) {}
@@ -71,90 +50,93 @@ struct JSONEditorPane: View {
         }
     }
 
-    // MARK: - Header / toolbar
-
-    private var header: some View {
-        HStack(spacing: 14) {
-            Text(title)
-                .font(.headline)
-
-            Spacer()
-
-            Button { viewModel.loadSample() } label: {
-                Image(systemName: "wand.and.stars")
-            }
-            .help("Load sample JSON")
-
-            Button { viewModel.format() } label: {
-                Image(systemName: "list.bullet.indent")
-            }
-            .disabled(viewModel.parsedValue == nil)
-            .help("Format (pretty-print)")
-
-            Button { viewModel.minify() } label: {
-                Image(systemName: "arrow.down.right.and.arrow.up.left")
-            }
-            .disabled(viewModel.parsedValue == nil)
-            .help("Minify (strip whitespace)")
-
-            Button {
-                Clipboard.copy(viewModel.text)
-                showingCopyConfirmation = true
-            } label: {
-                Image(systemName: "doc.on.doc")
-            }
-            .disabled(viewModel.text.isEmpty)
-            .help("Copy to clipboard")
-            .popover(isPresented: $showingCopyConfirmation, arrowEdge: .bottom) {
-                Text("Copied")
-                    .font(.caption)
-                    .padding(8)
-                    .background(.regularMaterial)
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
-                            showingCopyConfirmation = false
-                        }
-                    }
-            }
-
-            Button {
-                snippetName = defaultSnippetName()
-                showingSaveAlert = true
-            } label: {
-                Image(systemName: "square.and.arrow.down")
-            }
-            .disabled(viewModel.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            .help("Save to History")
-
-            Button { showingInfoPopover = true } label: {
-                Image(systemName: "info.circle")
-            }
-            .help("Document info")
-            .popover(isPresented: $showingInfoPopover, arrowEdge: .bottom) {
-                InfoPopoverContent(stats: viewModel.stats, isValid: viewModel.error == nil && viewModel.parsedValue != nil)
-            }
-        }
-        .buttonStyle(.borderless)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+    /// Whichever document the toolbar buttons should currently act on: the shared
+    /// document for single-pane tools, or whichever Compare pane is selected.
+    private var activeDocument: JSONEditorViewModel {
+        guard appViewModel.selectedTool == .compare else { return appViewModel.document }
+        return activeComparePane == .left ? appViewModel.compareLeft : appViewModel.compareRight
     }
 
-    private var statusBar: some View {
-        HStack(spacing: 12) {
-            Label("\(viewModel.lineCount) lines", systemImage: "list.number")
-            Label("\(viewModel.characterCount) chars", systemImage: "textformat.size")
-            Spacer()
-            if let error = viewModel.error {
-                Label("Line \(error.line), Col \(error.column)", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.red)
-            } else if viewModel.parsedValue != nil {
-                Label("Valid JSON", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        if appViewModel.selectedTool.usesEditorPane {
+            if appViewModel.selectedTool == .compare {
+                ToolbarItemGroup(placement: .navigation) {
+                    Picker("Active Pane", selection: $activeComparePane) {
+                        Text("Left").tag(ComparePane.left)
+                        Text("Right").tag(ComparePane.right)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 140)
+                }
+            }
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button {
+                    activeDocument.loadSample()
+                } label: {
+                    Image(systemName: "wand.and.stars")
+                }
+                .help("Load sample JSON")
+
+                Button {
+                    activeDocument.format()
+                } label: {
+                    Image(systemName: "list.bullet.indent")
+                }
+                .disabled(activeDocument.parsedValue == nil)
+                .help("Format (pretty-print)")
+
+                Button {
+                    activeDocument.minify()
+                } label: {
+                    Image(systemName: "arrow.down.right.and.arrow.up.left")
+                }
+                .disabled(activeDocument.parsedValue == nil)
+                .help("Minify (strip whitespace)")
+
+                Button {
+                    Clipboard.copy(activeDocument.text)
+                    showingCopyConfirmation = true
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                }
+                .disabled(activeDocument.text.isEmpty)
+                .help("Copy to clipboard")
+                .popover(isPresented: $showingCopyConfirmation, arrowEdge: .bottom) {
+                    Text("Copied")
+                        .font(.caption)
+                        .padding(8)
+                        .background(.regularMaterial)
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                                showingCopyConfirmation = false
+                            }
+                        }
+                }
+
+                Button {
+                    snippetName = defaultSnippetName()
+                    showingSaveAlert = true
+                } label: {
+                    Image(systemName: "tray.and.arrow.down")
+                }
+                .disabled(activeDocument.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .help("Save to History")
+
+                Button {
+                    showingInfoPopover = true
+                } label: {
+                    Image(systemName: "info.circle")
+                }
+                .help("Document info")
+                .popover(isPresented: $showingInfoPopover, arrowEdge: .bottom) {
+                    InfoPopoverContent(
+                        stats: activeDocument.stats,
+                        isValid: activeDocument.error == nil && activeDocument.parsedValue != nil
+                    )
+                }
             }
         }
-        .font(.caption)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
     }
 
     private func defaultSnippetName() -> String {
@@ -166,8 +148,62 @@ struct JSONEditorPane: View {
 
     private func saveSnippet() {
         let name = snippetName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let snippet = SavedSnippet(name: name.isEmpty ? defaultSnippetName() : name, jsonText: viewModel.text)
+        let snippet = SavedSnippet(name: name.isEmpty ? defaultSnippetName() : name, jsonText: activeDocument.text)
         modelContext.insert(snippet)
+    }
+}
+
+/// A single editor pane: the code editor plus a compact status strip below it.
+/// `label` is only used in Compare mode to distinguish the two panes.
+struct JSONEditorPane: View {
+    let label: String?
+    @ObservedObject var viewModel: JSONEditorViewModel
+    @AppStorage("editorFontSize") private var editorFontSize: Double = 12
+
+    var body: some View {
+        VStack(spacing: 0) {
+            CodeEditor(
+                text: $viewModel.text,
+                state: viewModel.editorState,
+                errorLine: viewModel.error?.line,
+                fontSize: CGFloat(editorFontSize)
+            )
+            .frame(minWidth: 320, minHeight: 120)
+            .overlay(alignment: .topLeading) {
+                if let label {
+                    Text(label)
+                        .font(.caption.bold())
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(.regularMaterial, in: Capsule())
+                        .padding(6)
+                }
+            }
+
+            Divider()
+            statusBar
+                .frame(height: 28)
+                .background(.regularMaterial)
+        }
+    }
+
+    private var statusBar: some View {
+        HStack(spacing: 12) {
+            Label("\(viewModel.lineCount) lines", systemImage: "list.number")
+            Label("\(viewModel.characterCount) chars", systemImage: "textformat.size")
+            Label("Ln \(viewModel.editorState.cursorLine), Col \(viewModel.editorState.cursorColumn)", systemImage: "cursorarrow")
+                .foregroundStyle(.secondary)
+            Spacer()
+            if let error = viewModel.error {
+                Label("Line \(error.line), Col \(error.column)", systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+            } else if viewModel.parsedValue != nil {
+                Label("Valid JSON", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            }
+        }
+        .font(.caption)
+        .padding(.horizontal, 10)
     }
 }
 

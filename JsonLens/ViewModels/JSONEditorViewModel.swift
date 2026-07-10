@@ -7,44 +7,89 @@
 
 import Foundation
 internal import Combine
+import AppKit
 
-/// Wraps one pane of editable JSON text. Compare uses two instances of this;
-/// every other tool shares one via `AppViewModel`.
+/// Wraps one JSON editing document.
+/// Used by Visualize, Validate, Generate and both sides of Compare.
+@MainActor
 final class JSONEditorViewModel: ObservableObject {
+
     @Published var text: String {
-        didSet { reparse() }
+        didSet {
+            reparse()
+        }
     }
-    @Published private(set) var parseResult: Result<JSONValue, JSONParseError>?
+
+    @Published private(set) var parseResult:
+        Result<JSONValue, JSONParseError>?
+
+    /// State owned by the editor, not JSON.
+    let editorState = EditorState()
 
     init(text: String = "") {
         self.text = text
         reparse()
     }
 
-    var lineCount: Int {
-        guard !text.isEmpty else { return 1 }
-        return text.reduce(1) { count, ch in ch == "\n" ? count + 1 : count }
-    }
 
-    var characterCount: Int { text.count }
+    // MARK: - JSON state
 
     var parsedValue: JSONValue? {
-        if case .success(let value) = parseResult { return value }
+        if case .success(let value) = parseResult {
+            return value
+        }
         return nil
     }
+
 
     var error: JSONParseError? {
-        if case .failure(let err) = parseResult { return err }
+        if case .failure(let error) = parseResult {
+            return error
+        }
         return nil
     }
 
+
+    // MARK: - Statistics
+
+    var lineCount: Int {
+        guard !text.isEmpty else {
+            return 1
+        }
+
+        return text.reduce(1) {
+            $1 == "\n" ? $0 + 1 : $0
+        }
+    }
+
+
+    var characterCount: Int {
+        text.count
+    }
+
+
+    var stats: JSONStats {
+        JSONStats.compute(
+            text: text,
+            value: parsedValue
+        )
+    }
+
+
+    // MARK: - Actions
+
+
     func loadSample() {
+
         text = """
         {
           "name": "Ada Lovelace",
           "born": 1815,
           "isProgrammer": true,
-          "skills": ["mathematics", "analytical engines"],
+          "skills": [
+            "mathematics",
+            "analytical engines"
+          ],
           "address": {
             "city": "London",
             "country": "England"
@@ -54,23 +99,59 @@ final class JSONEditorViewModel: ObservableObject {
         """
     }
 
+
     func format() {
-        guard let value = parsedValue else { return }
-        text = JSONPrettyPrinter.print(value)
+
+        guard let value = parsedValue else {
+            return
+        }
+
+        replaceTextPreservingCursor {
+            JSONPrettyPrinter.print(value)
+        }
     }
+
 
     func minify() {
-        guard let value = parsedValue else { return }
-        text = JSONMinifier.minify(value)
+
+        guard let value = parsedValue else {
+            return
+        }
+
+        replaceTextPreservingCursor {
+            JSONMinifier.minify(value)
+        }
     }
 
-    var stats: JSONStats { JSONStats.compute(text: text, value: parsedValue) }
+
+
+    // MARK: - Private
+
+
+    private func replaceTextPreservingCursor(
+        _ generator: () -> String
+    ) {
+
+        let oldSelection = editorState.selectedRange
+
+        text = generator()
+
+        DispatchQueue.main.async {
+            self.editorState.selectedRange = oldSelection
+        }
+    }
+
 
     private func reparse() {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+
+        guard !text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .isEmpty
+        else {
             parseResult = nil
             return
         }
+
         parseResult = JSONParser.parse(text)
     }
 }
