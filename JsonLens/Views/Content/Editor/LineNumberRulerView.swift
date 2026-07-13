@@ -20,6 +20,11 @@ final class LineNumberRulerView: NSRulerView {
         self.target = textView
         self.clientView = textView
         self.ruleThickness = 44
+        // macOS 14 flipped the default of `clipsToBounds` to false. Without this the
+        // ruler (and the _NSRulerContentView around it) no longer clips to its own
+        // bounds and paints over the text view — the gutter renders as an overlay on
+        // top of the content instead of a column beside it. (Apple DTS-confirmed fix.)
+        self.clipsToBounds = true
     }
 
     required init(coder: NSCoder) { fatalError("init(coder:) not supported") }

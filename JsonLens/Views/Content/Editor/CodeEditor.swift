@@ -5,6 +5,7 @@
 //  Created by Six Johann  on 08/07/2026.
 //
 
+
 import SwiftUI
 import AppKit
 
@@ -24,19 +25,49 @@ struct CodeEditor: NSViewRepresentable {
 
     func makeNSView(context: Context) -> NSScrollView {
 
-        // Must call scrollableTextView() on the *subclass*, not on NSTextView itself —
-        // otherwise it always constructs a plain NSTextView and the cast below always
-        // fails, silently skipping every bit of setup after the guard.
-        let scrollView = CodeTextView.scrollableTextView()
-
+        let scrollView = NSScrollView()
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
+        scrollView.drawsBackground = true
+        // macOS 14+ defaults clipsToBounds to false; keep the scroll view clipping
+        // so the ruler can't bleed past it (e.g. up into the title bar).
+        scrollView.clipsToBounds = true
 
-        guard let textView = scrollView.documentView as? CodeTextView else {
-            return scrollView
-        }
+        // Build ONE clean TextKit stack owned directly by CodeTextView. The old
+        // approach let scrollableTextView() build a stack and then re-hosted its
+        // NSTextContainer inside a second (our) text view — leaving the layout
+        // manager half-wired to two views. Glyphs then only flushed to the visible
+        // view after a forced re-layout (typing / scroll / SwiftUI update), which
+        // is exactly the "present but not drawn until it updates" symptom.
+        //
+        // The sizing flags below are the ones whose absence makes a hand-rolled
+        // NSTextView look "dead" (zero-width container → no layout → clicks miss):
+        //   • container.widthTracksTextView + height .greatestFiniteMagnitude
+        //   • isVerticallyResizable = true
+        //   • autoresizingMask = [.width]  (so it tracks the clip view width)
+        let contentSize = scrollView.contentSize
+
+        let textStorage = NSTextStorage()
+        let layoutManager = NSLayoutManager()
+        textStorage.addLayoutManager(layoutManager)
+
+        let textContainer = NSTextContainer(
+            size: NSSize(width: contentSize.width, height: .greatestFiniteMagnitude)
+        )
+        textContainer.widthTracksTextView = true
+        layoutManager.addTextContainer(textContainer)
+
+        let textView = CodeTextView(
+            frame: NSRect(origin: .zero, size: contentSize),
+            textContainer: textContainer
+        )
+        textView.minSize = NSSize(width: 0, height: 0)
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
 
         textView.delegate = context.coordinator
         textView.isRichText = false
@@ -52,15 +83,19 @@ struct CodeEditor: NSViewRepresentable {
         textView.textContainerInset = NSSize(width: 8, height: 8)
 
         textView.drawsBackground = true
+        // All three must be dynamic system colors so they track light/dark mode
+        // together. Hardcoding `.black` here made the text and caret invisible in
+        // Dark Mode, since `.textBackgroundColor` flips to near-black — the content
+        // was present and editable (Cmd-Z, selection all worked), just unpainted.
         textView.backgroundColor = .textBackgroundColor
-        textView.textColor = .labelColor
-        textView.insertionPointColor = .labelColor
+        textView.textColor = .textColor
+        textView.insertionPointColor = .textColor
 
         textView.string = text
 
+        scrollView.documentView = textView
+
         state.textView = textView
-        // This was the second bug: without this line, `updateNSView` below always
-        // early-returns because context.coordinator.textView stays nil forever.
         context.coordinator.textView = textView
 
         let ruler = LineNumberRulerView(textView: textView)
