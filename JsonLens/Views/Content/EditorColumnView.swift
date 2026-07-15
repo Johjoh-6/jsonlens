@@ -14,6 +14,7 @@ import SwiftData
 struct EditorColumnView: View {
     @ObservedObject var appViewModel: AppViewModel
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \SavedSnippet.createdAt, order: .reverse) private var snippets: [SavedSnippet]
 
     private enum ComparePane: Hashable { case left, right }
     @State private var activeComparePane: ComparePane = .left
@@ -22,6 +23,8 @@ struct EditorColumnView: View {
     @State private var showingSaveAlert = false
     @State private var snippetName = ""
     @State private var showingCopyConfirmation = false
+    @State private var showingLoadAlert = false
+    @State private var showingLoadFrom = ""
 
     var body: some View {
         Group {
@@ -72,12 +75,42 @@ struct EditorColumnView: View {
             }
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
-                    activeDocument.loadSample()
+                    loadSnippet()
+                    showingLoadAlert = true
                 } label: {
                     Image(systemName: "wand.and.stars")
                 }
-                .help("Load sample JSON")
-
+                .help("Load last JSON")
+                .popover(isPresented: $showingLoadAlert, arrowEdge: .bottom) {
+                    Text("Loaded from \(showingLoadFrom)")
+                        .font(.caption)
+                        .padding(8)
+                        .background(.regularMaterial)
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                                showingLoadAlert = false
+                            }
+                        }
+                }
+                Button {
+                    snippetName = defaultSnippetName()
+                    showingSaveAlert = true
+                } label: {
+                    Image(systemName: "tray.and.arrow.down")
+                }
+                .disabled(activeDocument.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .help("Save to History")
+                .keyboardShortcut("S", modifiers: [.command])
+                
+                Button {
+                    appViewModel.clearEditor()
+                } label : {
+                    Image(systemName: "delete.left")
+                }
+                .help("Clear the editor")
+                
+            }
+            ToolbarItemGroup(placement: .primaryAction) {
                 Button {
                     activeDocument.format()
                 } label: {
@@ -85,7 +118,8 @@ struct EditorColumnView: View {
                 }
                 .disabled(activeDocument.parsedValue == nil)
                 .help("Format (pretty-print)")
-
+                .keyboardShortcut("F", modifiers: [.command])
+                
                 Button {
                     activeDocument.minify()
                 } label: {
@@ -93,6 +127,7 @@ struct EditorColumnView: View {
                 }
                 .disabled(activeDocument.parsedValue == nil)
                 .help("Minify (strip whitespace)")
+                .keyboardShortcut("M", modifiers: [.command])
 
                 Button {
                     Clipboard.copy(activeDocument.text)
@@ -113,22 +148,13 @@ struct EditorColumnView: View {
                             }
                         }
                 }
-
                 Button {
-                    snippetName = defaultSnippetName()
-                    showingSaveAlert = true
-                } label: {
-                    Image(systemName: "tray.and.arrow.down")
-                }
-                .disabled(activeDocument.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .help("Save to History")
-
-                Button {
-                    showingInfoPopover = true
+                    showingInfoPopover.toggle()
                 } label: {
                     Image(systemName: "info.circle")
                 }
                 .help("Document info")
+                .keyboardShortcut("I", modifiers: [.command])
                 .popover(isPresented: $showingInfoPopover, arrowEdge: .bottom) {
                     InfoPopoverContent(
                         stats: activeDocument.stats,
@@ -137,6 +163,16 @@ struct EditorColumnView: View {
                 }
             }
         }
+    }
+    
+    private func loadSnippet(){
+        guard let snippet = snippets.first else {
+            activeDocument.loadSample()
+            showingLoadFrom = "Sample"
+            return
+        }
+        appViewModel.loadIntoEditor(snippet)
+        showingLoadFrom = "Last History"
     }
 
     private func defaultSnippetName() -> String {
