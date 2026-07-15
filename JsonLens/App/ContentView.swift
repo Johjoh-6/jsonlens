@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-import SwiftUI
 
 struct ContentView: View {
     //    Manage the navigation between page
