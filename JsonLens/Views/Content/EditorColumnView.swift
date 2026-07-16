@@ -107,6 +107,7 @@ struct EditorColumnView: View {
                 } label : {
                     Image(systemName: "delete.left")
                 }
+                .disabled(activeDocument.parsedValue == nil)
                 .help("Clear the editor")
                 
             }
