@@ -34,8 +34,6 @@ struct VisualizeView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Visualize").font(.title2.bold()).padding([.top, .horizontal])
-
             if let value = document.parsedValue {
                 legend
                 let root = JSONTreeNode.build(key: "root", value: value)

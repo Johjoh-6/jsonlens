@@ -14,8 +14,6 @@ struct CompareView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Compare JSON").font(.title2.bold()).padding([.top, .horizontal])
-
             if let leftError = left.error {
                 statusBanner(title: "Left JSON is invalid", error: leftError)
             } else if let rightError = right.error {

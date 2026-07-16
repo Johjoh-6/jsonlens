@@ -11,9 +11,7 @@ struct ValidatorView: View {
     @ObservedObject var document: JSONEditorViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Format Checker").font(.title2.bold())
-
+        VStack(alignment: .leading, spacing: 0) {
             if document.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 ContentUnavailableView("Paste JSON in the editor", systemImage: "checkmark.seal")
             } else if let error = document.error {
@@ -21,8 +19,6 @@ struct ValidatorView: View {
             } else {
                 validCard
             }
-
-            Spacer()
         }
         .padding()
     }
