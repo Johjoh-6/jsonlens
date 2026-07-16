@@ -34,7 +34,7 @@ struct GoGenerator: CodeGenerating {
         case .int:    return "int"
         case .double: return "float64"
         case .bool:   return "bool"
-        case .null:   return "interface{}"
+        case .null:   return "any" // or {}interface
         case .array(let inner): return "[]" + typeString(inner)
         case .object(let n): return n.name
         case .optional(let inner): return "*" + typeString(inner)

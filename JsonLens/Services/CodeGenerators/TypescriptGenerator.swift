@@ -36,7 +36,7 @@ struct TypeScriptGenerator: CodeGenerating {
     }
 
     private func render(_ node: TypeNode) -> String {
-        var lines = ["\(mode.header)\n\n"]
+        var lines = ["\(mode.header)\n"]
         switch mode {
             case .type: lines.append("type \(node.name) = {")
             case .interface: lines.append("interface \(node.name) {")

@@ -94,7 +94,7 @@ enum TypeModelBuilder {
         switch value {
         case .string: return .string
         case .bool:   return .bool
-        case .null:   return .optional(.null)
+        case .null:   return .null
         case .number(let raw):
             return (raw.contains(".") || raw.lowercased().contains("e")) ? .double : .int
         case .array(let items):
@@ -119,7 +119,7 @@ enum TypeModelBuilder {
         if a == b { return a }
         switch (a, b) {
         case (.null, let other), (let other, .null):
-            return .optional(other)
+            return makeOptional(other)
         case (.int, .double), (.double, .int):
             return .double
         case (.optional(let inner), let other), (let other, .optional(let inner)):
@@ -140,5 +140,17 @@ enum TypeModelBuilder {
         let cleaned = name.split(separator: "_").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
         guard let first = cleaned.first else { return "Root" }
         return first.uppercased() + cleaned.dropFirst()
+    }
+    
+    /// Wraps a type as optional, unless it's already nullable in some form (`.optional` or bare `.null`) — prevents ever producing a nested double-optional like
+    /// `.optional(.optional(...))` or `.optional(.null)`
+    /// which generators would render as a double marker (`String??`, or invalid syntax in languages ).
+    private static func makeOptional(_ type: FieldType) -> FieldType {
+        switch type {
+        case .optional, .null:
+            return type
+        default:
+            return .optional(type)
+        }
     }
 }
