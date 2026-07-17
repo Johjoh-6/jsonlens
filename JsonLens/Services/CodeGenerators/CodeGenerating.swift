@@ -25,6 +25,21 @@ enum OutputLanguage: String, CaseIterable, Identifiable {
         case .python:     return PythonGenerator()
         }
     }
+
+    /// Keywords emitted by this language's generator, used to highlight its preview.
+    /// Add a case here alongside a new generator so its preview gains syntax colors.
+    var generatedCodeKeywords: [String] {
+        switch self {
+        case .swift:
+            return ["import", "struct", "class", "enum", "protocol", "extension", "let", "var", "func", "return", "public", "private", "internal", "static", "optional"]
+        case .go:
+            return ["package", "import", "type", "struct", "interface", "func", "var", "const", "return", "map", "range"]
+        case .typescriptT, .typescriptI:
+            return ["export", "type", "interface", "extends", "readonly", "const", "let", "function", "return", "null", "undefined"]
+        case .python:
+            return ["from", "import", "class", "def", "self", "return", "None", "True", "False", "list", "dict"]
+        }
+    }
 }
 
 protocol CodeGenerating {
