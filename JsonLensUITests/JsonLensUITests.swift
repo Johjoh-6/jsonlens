@@ -23,14 +23,16 @@ final class JsonLensUITests: XCTestCase {
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testTypeGeneratorShowsGuidanceBeforeJSONIsEntered() throws {
         let app = XCUIApplication()
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // XCUIAutomation Documentation
-        // https://developer.apple.com/documentation/xcuiautomation
+        let generatorTool = app.staticTexts["tool.generateType"]
+        XCTAssertTrue(generatorTool.waitForExistence(timeout: 2))
+        generatorTool.click()
+
+        XCTAssertTrue(app.staticTexts["Paste JSON in the editor"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.buttons["structGenerator.copyButton"].isEnabled)
     }
 
     @MainActor

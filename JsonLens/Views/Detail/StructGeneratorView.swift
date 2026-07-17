@@ -40,6 +40,7 @@ struct StructGeneratorView: View {
                     Label("Copy", systemImage: "doc.on.doc")
                 }
                 .disabled(document.parsedValue == nil)
+                .accessibilityIdentifier("structGenerator.copyButton")
             }
             .padding(.horizontal)
 
@@ -60,6 +61,8 @@ struct StructGeneratorView: View {
                     description: Text("Line \(error.line), column \(error.column): \(error.message)")
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("structGenerator.invalidState")
             } else {
                 ContentUnavailableView(
                     "Paste JSON in the editor",
@@ -67,6 +70,8 @@ struct StructGeneratorView: View {
                     description: Text("Generated types will appear here.")
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("structGenerator.emptyState")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

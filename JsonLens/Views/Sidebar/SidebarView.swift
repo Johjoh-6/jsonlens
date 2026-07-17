@@ -14,6 +14,7 @@ struct SidebarView: View {
         List(Tool.allCases, selection: $appViewModel.selectedTool) { tool in
             Label(tool.title, systemImage: tool.systemImage)
                 .tag(tool)
+                .accessibilityIdentifier("tool.\(tool.rawValue)")
         }
         .navigationTitle("JsonLens")
         .listStyle(.sidebar)
