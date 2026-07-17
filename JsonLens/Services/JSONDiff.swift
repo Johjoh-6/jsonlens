@@ -17,6 +17,24 @@ struct DiffEntry: Identifiable {
     let kind: DiffKind
     let leftDescription: String?
     let rightDescription: String?
+    let leftLine: Int?
+    let rightLine: Int?
+
+    init(
+        path: String,
+        kind: DiffKind,
+        leftDescription: String?,
+        rightDescription: String?,
+        leftLine: Int? = nil,
+        rightLine: Int? = nil
+    ) {
+        self.path = path
+        self.kind = kind
+        self.leftDescription = leftDescription
+        self.rightDescription = rightDescription
+        self.leftLine = leftLine
+        self.rightLine = rightLine
+    }
 }
 
 enum JSONDiffService {

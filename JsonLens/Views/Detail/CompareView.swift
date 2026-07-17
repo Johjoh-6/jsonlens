@@ -8,17 +8,17 @@
 import SwiftUI
 
 struct CompareView: View {
-    @ObservedObject var left: JSONEditorViewModel
-    @ObservedObject var right: JSONEditorViewModel
+    @ObservedObject var document: JSONEditorViewModel
+    @ObservedObject var comparison: JSONEditorViewModel
     @StateObject private var viewModel = CompareViewModel()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let leftError = left.error {
-                statusBanner(title: "Left JSON is invalid", error: leftError)
-            } else if let rightError = right.error {
-                statusBanner(title: "Right JSON is invalid", error: rightError)
-            } else if let entries = viewModel.diffEntries(left: left, right: right) {
+            if let documentError = document.error {
+                statusBanner(title: "Left JSON is invalid", error: documentError)
+            } else if let comparisonError = comparison.error {
+                statusBanner(title: "Right JSON is invalid", error: comparisonError)
+            } else if let entries = viewModel.diffEntries(document: document, comparison: comparison) {
                 let changed = entries.filter { $0.kind != .same }
                 if changed.isEmpty {
                     ContentUnavailableView("No differences", systemImage: "checkmark.circle",
@@ -62,18 +62,44 @@ private struct DiffRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             icon
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.path)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Path: \(entry.path)")
                     .font(.system(.body, design: .monospaced))
-                if let l = entry.leftDescription {
-                    Text("− \(l)").font(.caption.monospaced()).foregroundStyle(.red)
-                }
-                if let r = entry.rightDescription {
-                    Text("+ \(r)").font(.caption.monospaced()).foregroundStyle(.green)
-                }
+                sourceValue(
+                    "Left",
+                    value: entry.leftDescription,
+                    line: entry.leftLine,
+                    color: .red
+                )
+                sourceValue(
+                    "Right",
+                    value: entry.rightDescription,
+                    line: entry.rightLine,
+                    color: .green
+                )
             }
         }
         .padding(.vertical, 2)
+    }
+
+    private func sourceValue(
+        _ label: String,
+        value: String?,
+        line: Int?,
+        color: Color
+    ) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(line.map { "\(label) · line \($0)" } ?? label)
+                .font(.caption.bold())
+            Text(value ?? "Not present")
+                .font(.caption.monospaced())
+                .textSelection(.enabled)
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(value == nil ? .secondary : color)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(value == nil ? Color.secondary.opacity(0.08) : color.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
     }
 
     private var icon: some View {

@@ -89,7 +89,6 @@ struct SettingsFeatureView: View {
 
     private func resetEditors() {
         appViewModel.document.text = ""
-        appViewModel.compareLeft.text = ""
         appViewModel.compareRight.text = ""
     }
 }

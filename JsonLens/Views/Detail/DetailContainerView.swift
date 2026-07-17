@@ -19,7 +19,7 @@ struct DetailContainerView: View {
                 StructGeneratorView(document: appViewModel.document,
                                      selectedLanguage: $appViewModel.selectedLanguage)
             case .compare:
-                CompareView(left: appViewModel.compareLeft, right: appViewModel.compareRight)
+                CompareView(document: appViewModel.document, comparison: appViewModel.compareRight)
             case .validate:
                 ValidatorView(document: appViewModel.document)
             case .history:

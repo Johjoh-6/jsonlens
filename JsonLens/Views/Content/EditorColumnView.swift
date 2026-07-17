@@ -16,8 +16,7 @@ struct EditorColumnView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \SavedSnippet.createdAt, order: .reverse) private var snippets: [SavedSnippet]
 
-    private enum ComparePane: Hashable { case left, right }
-    @State private var activeComparePane: ComparePane = .left
+
 
     @State private var showingInfoPopover = false
     @State private var showingSaveAlert = false
@@ -35,8 +34,8 @@ struct EditorColumnView: View {
                 SettingsFeatureView(appViewModel: appViewModel)
             case .compare:
                 HSplitView {
-                    JSONEditorPane(label: "Left", viewModel: appViewModel.compareLeft)
-                    JSONEditorPane(label: "Right", viewModel: appViewModel.compareRight)
+                    JSONEditorPane(label: "Left", viewModel: appViewModel.document, minimumWidth: 160)
+                    JSONEditorPane(label: "Right", viewModel: appViewModel.compareRight, minimumWidth: 160)
                 }
             case .visualize, .generateType, .validate:
                 JSONEditorPane(label: nil, viewModel: appViewModel.document)
@@ -53,26 +52,16 @@ struct EditorColumnView: View {
         }
     }
 
-    /// Whichever document the toolbar buttons should currently act on: the shared
-    /// document for single-pane tools, or whichever Compare pane is selected.
+    /// The shared app document is the target for all toolbar actions, including
+    /// Compare mode where it appears in the left pane.
     private var activeDocument: JSONEditorViewModel {
-        guard appViewModel.selectedTool == .compare else { return appViewModel.document }
-        return activeComparePane == .left ? appViewModel.compareLeft : appViewModel.compareRight
+        appViewModel.document
     }
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         if appViewModel.selectedTool.usesEditorPane {
-            if appViewModel.selectedTool == .compare {
-                ToolbarItemGroup(placement: .navigation) {
-                    Picker("Active Pane", selection: $activeComparePane) {
-                        Text("Left").tag(ComparePane.left)
-                        Text("Right").tag(ComparePane.right)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 140)
-                }
-            }
+
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
                     loadSnippet()
@@ -103,7 +92,7 @@ struct EditorColumnView: View {
                 .keyboardShortcut("S", modifiers: [.command])
                 
                 Button {
-                    appViewModel.clearEditor()
+                    activeDocument.text = ""
                 } label : {
                     Image(systemName: "delete.left")
                 }
@@ -172,7 +161,7 @@ struct EditorColumnView: View {
             showingLoadFrom = "Sample"
             return
         }
-        appViewModel.loadIntoEditor(snippet)
+        activeDocument.text = snippet.jsonText
         showingLoadFrom = "Last History"
     }
 
@@ -195,27 +184,35 @@ struct EditorColumnView: View {
 struct JSONEditorPane: View {
     let label: String?
     @ObservedObject var viewModel: JSONEditorViewModel
+    let minimumWidth: CGFloat
+
+    init(label: String?, viewModel: JSONEditorViewModel, minimumWidth: CGFloat = 320) {
+        self.label = label
+        self.viewModel = viewModel
+        self.minimumWidth = minimumWidth
+    }
     @AppStorage("editorFontSize") private var editorFontSize: Double = 12
 
     var body: some View {
         VStack(spacing: 0) {
+            if let label {
+                HStack {
+                    Text(label)
+                        .font(.caption.bold())
+                    Spacer()
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(.regularMaterial)
+            }
+
             CodeEditor(
                 text: $viewModel.text,
                 state: viewModel.editorState,
                 errorLine: viewModel.error?.line,
                 fontSize: CGFloat(editorFontSize)
             )
-            .frame(minWidth: 320, minHeight: 120)
-            .overlay(alignment: .topLeading) {
-                if let label {
-                    Text(label)
-                        .font(.caption.bold())
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(.regularMaterial, in: Capsule())
-                        .padding(6)
-                }
-            }
+            .frame(minWidth: minimumWidth, minHeight: 120)
 
             Divider()
             statusBar

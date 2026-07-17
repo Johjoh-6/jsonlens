@@ -11,8 +11,25 @@ internal import Combine
 
 final class CompareViewModel: ObservableObject {
 
-    func diffEntries(left: JSONEditorViewModel, right: JSONEditorViewModel) -> [DiffEntry]? {
-        guard let l = left.parsedValue, let r = right.parsedValue else { return nil }
-        return JSONDiffService.diff(left: l, right: r)
+    func diffEntries(document: JSONEditorViewModel, comparison: JSONEditorViewModel) -> [DiffEntry]? {
+        guard let documentValue = document.parsedValue,
+              let comparisonValue = comparison.parsedValue
+        else {
+            return nil
+        }
+
+        let documentLines = JSONParser.lineNumbers(in: document.text)
+        let comparisonLines = JSONParser.lineNumbers(in: comparison.text)
+
+        return JSONDiffService.diff(left: documentValue, right: comparisonValue).map { entry in
+            DiffEntry(
+                path: entry.path,
+                kind: entry.kind,
+                leftDescription: entry.leftDescription,
+                rightDescription: entry.rightDescription,
+                leftLine: documentLines[entry.path],
+                rightLine: comparisonLines[entry.path]
+            )
+        }
     }
 }

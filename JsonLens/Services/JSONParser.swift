@@ -27,7 +27,7 @@ struct JSONParser {
         var parser = JSONParser(text)
         do {
             parser.skipWhitespace()
-            let value = try parser.parseValue()
+            let value = try parser.parseValue(path: "$", locations: nil)
             parser.skipWhitespace()
             if !parser.isAtEnd {
                 throw parser.error("Unexpected trailing characters after JSON value")
@@ -38,6 +38,26 @@ struct JSONParser {
         } catch {
             return .failure(JSONParseError(message: "Unknown parse error", line: 1, column: 1, index: 0))
         }
+    }
+
+    /// Returns the 1-based source line where each JSON path's value begins.
+    /// Diffing only requests locations for documents that have already parsed successfully.
+    static func lineNumbers(in text: String) -> [String: Int] {
+        var parser = JSONParser(text)
+        let locations = SourceLocations()
+
+        do {
+            parser.skipWhitespace()
+            _ = try parser.parseValue(path: "$", locations: locations)
+            parser.skipWhitespace()
+            return parser.isAtEnd ? locations.lines : [:]
+        } catch {
+            return [:]
+        }
+    }
+
+    private final class SourceLocations {
+        var lines: [String: Int] = [:]
     }
 
     // MARK: - Cursor helpers
@@ -79,14 +99,15 @@ struct JSONParser {
     // MARK: - Value parsing
     /// Important: The mutation keyword is mandatory. Since we need to mutate the struct value (immutable by default in Swift)
 
-    private mutating func parseValue() throws -> JSONValue {
+    private mutating func parseValue(path: String, locations: SourceLocations?) throws -> JSONValue {
         skipWhitespace()
+        locations?.lines[path] = line
         guard let c = peek() else {
             throw error("Unexpected end of input, expected a value")
         }
         switch c {
-        case "{": return try parseObject()
-        case "[": return try parseArray()
+        case "{": return try parseObject(path: path, locations: locations)
+        case "[": return try parseArray(path: path, locations: locations)
         case "\"": return .string(try parseStringLiteral())
         case "t", "f": return try parseBool()
         case "n": return try parseNull()
@@ -96,7 +117,7 @@ struct JSONParser {
         }
     }
 
-    private mutating func parseObject() throws -> JSONValue {
+    private mutating func parseObject(path: String, locations: SourceLocations?) throws -> JSONValue {
         try expect("{", context: "to start object")
         var entries: [JSONObjectEntry] = []
         skipWhitespace()
@@ -110,7 +131,7 @@ struct JSONParser {
             let key = try parseStringLiteral()
             skipWhitespace()
             try expect(":", context: "after object key '\(key)'")
-            let value = try parseValue()
+            let value = try parseValue(path: "\(path).\(key)", locations: locations)
             entries.append(JSONObjectEntry(key: key, value: value))
             skipWhitespace()
             guard let c = peek() else {
@@ -134,14 +155,14 @@ struct JSONParser {
         return .object(entries)
     }
 
-    private mutating func parseArray() throws -> JSONValue {
+    private mutating func parseArray(path: String, locations: SourceLocations?) throws -> JSONValue {
         try expect("[", context: "to start array")
         var items: [JSONValue] = []
         skipWhitespace()
         if peek() == "]" { advance(); return .array(items) }
 
         while true {
-            let value = try parseValue()
+            let value = try parseValue(path: "\(path)[\(items.count)]", locations: locations)
             items.append(value)
             skipWhitespace()
             guard let c = peek() else {
