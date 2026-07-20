@@ -71,7 +71,6 @@ struct ExtractView: View {
                 .disabled(viewModel.csvPreview.isEmpty)
                 .help("Download CSV")
 
-                Spacer()
                 Button {
                     Clipboard.copy(viewModel.csvPreview)
                     showingCopyConfirmation = true
@@ -94,29 +93,29 @@ struct ExtractView: View {
             .padding(.top)
 
             HStack {
-                Text("Array")
-                Picker("Array", selection: $viewModel.selectedSourcePath) {
-                    ForEach(viewModel.sources) { source in
-                        Text("\(source.path) · \(source.rows.count) rows")
-                            .tag(Optional(source.path))
+                    Text("Array")
+                    Picker("Array", selection: $viewModel.selectedSourcePath) {
+                        ForEach(viewModel.sources) { source in
+                            Text("\(source.path) · \(source.rows.count) rows")
+                                .tag(Optional(source.path))
+                        }
                     }
-                }
-                .labelsHidden()
-                .frame(maxWidth: 280)
-                .onChange(of: viewModel.selectedSourcePath) { _, path in
-                    if let source = viewModel.sources.first(where: { $0.path == path }) {
-                        viewModel.selectSource(source)
+                    .labelsHidden()
+                    .frame(maxWidth: 280)
+                    .onChange(of: viewModel.selectedSourcePath) { _, path in
+                        if let source = viewModel.sources.first(where: { $0.path == path }) {
+                            viewModel.selectSource(source)
+                        }
                     }
-                }
-                Text("Separator")
-                Picker("Separator", selection: $viewModel.separator) {
-                    ForEach(ExtractSeparator.allCases) { separator in
-                        Text(separator.title).tag(separator)
+                    Spacer()
+                    Text("Separator")
+                    Picker("Separator", selection: $viewModel.separator) {
+                        ForEach(ExtractSeparator.allCases) { separator in
+                            Text(separator.title).tag(separator)
+                        }
                     }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .frame(width: 150)
+                    .labelsHidden()
+                    .pickerStyle(.menu)
             }
             .padding(.horizontal)
 
@@ -127,7 +126,7 @@ struct ExtractView: View {
                     .frame(minHeight: 80)
                 csvPreview
                     .frame(minHeight: 180)
-            }
+            }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
 
@@ -139,7 +138,8 @@ struct ExtractView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            List {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 4) {
                 ForEach(viewModel.selectedSource?.fieldNames ?? [], id: \.self) { field in
                     Toggle(field, isOn: Binding(
                         get: { viewModel.selectedFields.contains(field) },
@@ -147,11 +147,11 @@ struct ExtractView: View {
                     ))
                     .font(.system(.body, design: .monospaced))
                 }
-            }
-            .listStyle(.inset)
+                }
+                   .padding()
+               }
         }
-        .padding(.leading)
-        .padding(.bottom)
+        .padding(16)
     }
 
     private var csvPreview: some View {
@@ -175,7 +175,7 @@ struct ExtractView: View {
                     .stroke(.separator, lineWidth: 1)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(16)
     }
 
     private func defaultFileName() -> String {
@@ -209,4 +209,9 @@ struct ExtractView: View {
             showingSaveError = true
         }
     }
+}
+
+#Preview {
+    ExtractView(document: .preview)
+    .frame(width: 700, height: 600)
 }
