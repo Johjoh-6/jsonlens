@@ -2,15 +2,21 @@
 //  ExtractView.swift
 //  JsonLens
 //
+//  Created by Six Johann  on 20/07/2026.
+//
 //  Select fields from an array of JSON objects and export them as CSV.
 //
 
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 
 struct ExtractView: View {
     @ObservedObject var document: JSONEditorViewModel
     @StateObject private var viewModel = ExtractViewModel()
     @State private var showingCopyConfirmation = false
+    @State private var showingSaveError = false
+    @State private var saveErrorMessage = ""
 
     var body: some View {
         Group {
@@ -40,8 +46,12 @@ struct ExtractView: View {
         .onChange(of: document.text) { _, _ in
             viewModel.update(for: document.parsedValue)
         }
+        .alert("Couldn’t Save CSV", isPresented: $showingSaveError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(saveErrorMessage)
+        }
     }
-
     private var extractor: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -52,6 +62,15 @@ struct ExtractView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                Spacer()
+                Button {
+                    downloadCSV()
+                } label: {
+                    Label("Download CSV", systemImage: "arrow.down.document")
+                }
+                .disabled(viewModel.csvPreview.isEmpty)
+                .help("Download CSV")
+
                 Spacer()
                 Button {
                     Clipboard.copy(viewModel.csvPreview)
@@ -103,11 +122,11 @@ struct ExtractView: View {
 
             Divider()
 
-            HSplitView {
+            VSplitView {
                 fieldSelector
-                    .frame(minWidth: 160)
+                    .frame(minHeight: 80)
                 csvPreview
-                    .frame(minWidth: 180)
+                    .frame(minHeight: 180)
             }
         }
     }
@@ -156,7 +175,38 @@ struct ExtractView: View {
                     .stroke(.separator, lineWidth: 1)
             }
         }
-        .padding(.trailing)
-        .padding(.bottom)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func defaultFileName() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return "CSV-Export-\(formatter.string(from: .now)).csv"
+    }
+
+    private func downloadCSV() {
+        let csv = viewModel.csvPreview
+        guard !csv.isEmpty else { return }
+
+        let panel = NSSavePanel()
+        panel.title = "Save CSV"
+        panel.prompt = "Save"
+        panel.nameFieldStringValue = defaultFileName()
+        panel.allowedContentTypes = [.commaSeparatedText]
+        panel.allowsOtherFileTypes = false
+        panel.canCreateDirectories = true
+        panel.directoryURL = FileManager.default.urls(
+            for: .downloadsDirectory,
+            in: .userDomainMask
+        ).first
+
+        guard panel.runModal() == .OK, let destination = panel.url else { return }
+
+        do {
+            try csv.write(to: destination, atomically: true, encoding: .utf8)
+        } catch {
+            saveErrorMessage = error.localizedDescription
+            showingSaveError = true
+        }
     }
 }
