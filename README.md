@@ -40,9 +40,10 @@ In **Compare JSON**, the shared app document is the left editor. This means edit
 2. Open **Extract Data** in the sidebar.
 3. Select the source array when more than one is available.
 4. Toggle the columns to include, for example `username` and `dob`.
-5. Review the CSV preview and choose **Copy CSV**.
+5. Choose a separator: comma, semicolon, tab, or pipe.
+6. Review the preview and choose **Copy CSV**.
 
-Cells with commas, quotes, or line breaks are escaped according to CSV conventions. Fields missing from a row become empty cells.
+Cells containing the selected separator, quotes, or line breaks are escaped according to CSV conventions. Fields missing from a row become empty cells.
 
 ## Generated type preview
 
