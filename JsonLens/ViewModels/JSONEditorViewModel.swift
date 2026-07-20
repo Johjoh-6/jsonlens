@@ -154,4 +154,17 @@ final class JSONEditorViewModel: ObservableObject {
 
         parseResult = JSONParser.parse(text)
     }
+    
+    static var preview: JSONEditorViewModel {
+        let vm = JSONEditorViewModel()
+        vm.text = """
+        {
+            "users": [
+                { "id": 1, "name": "Alice", "email": "alice@example.com" },
+                { "id": 2, "name": "Bob", "email": "bob@example.com" }
+            ]
+        }
+        """
+        return vm
+    }
 }
