@@ -79,3 +79,7 @@ struct ValidatorView: View {
     }
 }
 
+#Preview {
+    ValidatorView(document: .preview)
+        .frame(width: 600, height: 400)
+}
