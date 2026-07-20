@@ -37,7 +37,7 @@ struct EditorColumnView: View {
                     JSONEditorPane(label: "Left", viewModel: appViewModel.document, minimumWidth: 160)
                     JSONEditorPane(label: "Right", viewModel: appViewModel.compareRight, minimumWidth: 160)
                 }
-            case .visualize, .generateType, .validate:
+            case .visualize, .generateType, .validate, .extract:
                 JSONEditorPane(label: nil, viewModel: appViewModel.document)
             }
         }

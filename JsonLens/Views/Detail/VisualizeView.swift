@@ -124,3 +124,7 @@ private struct TypeGlyph {
     }
 }
 
+#Preview {
+    VisualizeView(document: .preview)
+    .frame(width: 700, height: 600)
+}

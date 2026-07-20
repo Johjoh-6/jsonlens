@@ -29,6 +29,8 @@ struct HistoryListView: View {
             if snippets.isEmpty {
                 ContentUnavailableView("No saved snippets yet", systemImage: "clock.arrow.circlepath",
                                         description: Text("Use the save button in any editor toolbar to keep a JSON snippet here."))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityElement(children: .contain)
             } else {
                 List(filtered, selection: $appViewModel.selectedSnippetID) { snippet in
                     VStack(alignment: .leading, spacing: 3) {

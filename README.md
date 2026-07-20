@@ -16,6 +16,7 @@ JsonLens is built with **SwiftUI**, **AppKit**, and **SwiftData**. It includes a
 - **Compare JSON** — compare the shared document on the left with a second JSON document on the right.
   - Highlights additions, removals, and changes.
   - Shows JSON paths, left/right values, and source line numbers.
+- **Extract Data** — choose an array of JSON objects and its fields, preview the result as CSV, then copy it.
 - **Format Checker** — reports JSON parsing errors with line and column information.
 - **History** — saves JSON snippets locally with SwiftData.
 - **Settings** — manages editor preferences and resets stored editor content.
@@ -29,9 +30,20 @@ The middle column contains the JSON editor. Use its toolbar to:
 - Clear, format, minify, or copy the shared document.
 - View document statistics and validation status.
 
-In **Compare JSON**, the shared app document is the left editor. This means edits you make in Visualize, Convert to Type, or Format Checker are immediately available on the left side of Compare.
+In **Compare JSON**, the shared app document is the left editor. This means edits you make in Visualize, Convert to Type, Format Checker, or Extract Data are immediately available on the left side of Compare.
 
 > The Compare toolbar acts on the shared left document. Edit the right pane directly when preparing a comparison.
+
+## Extract CSV
+
+1. Paste valid JSON containing an array of objects, such as an array of users.
+2. Open **Extract Data** in the sidebar.
+3. Select the source array when more than one is available.
+4. Toggle the columns to include, for example `username` and `dob`.
+5. Choose a separator: comma, semicolon, tab, or pipe.
+6. Review the preview and choose **Copy CSV**.
+
+Cells containing the selected separator, quotes, or line breaks are escaped according to CSV conventions. Fields missing from a row become empty cells.
 
 ## Generated type preview
 

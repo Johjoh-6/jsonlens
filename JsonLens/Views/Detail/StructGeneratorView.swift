@@ -124,3 +124,9 @@ private enum GeneratedCodeHighlighter {
         }
     }
 }
+
+#Preview {
+    @Previewable @State var language: OutputLanguage = .swift
+    return StructGeneratorView(document: .preview, selectedLanguage: $language)
+        .frame(width: 700, height: 500)
+}

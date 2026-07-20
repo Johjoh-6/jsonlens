@@ -18,6 +18,8 @@ struct DetailContainerView: View {
             case .generateType:
                 StructGeneratorView(document: appViewModel.document,
                                      selectedLanguage: $appViewModel.selectedLanguage)
+            case .extract:
+                ExtractView(document: appViewModel.document)
             case .compare:
                 CompareView(document: appViewModel.document, comparison: appViewModel.compareRight)
             case .validate:
