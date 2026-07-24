@@ -1,8 +1,36 @@
 # JsonLens
 
+![macOS](https://img.shields.io/badge/macOS-26.5%2B-blue)
+![Swift](https://img.shields.io/badge/Swift-6-orange)
+![SwiftUI](https://img.shields.io/badge/SwiftUI-Native-green)
+![Platform](https://img.shields.io/badge/Platform-macOS-lightgrey)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+
 A native macOS app for inspecting, validating, comparing, and turning JSON into type definitions.
 
 JsonLens is built with **SwiftUI**, **AppKit**, and **SwiftData**. It includes a line-numbered JSON editor, a three-column navigation layout, JSON comparison, generated model code, and saved snippets.
+
+## Download
+
+Download the latest version from the **GitHub Releases** page.
+
+➡️ **[Latest Release](../../releases/latest)**
+
+## Installation
+
+See **[INSTALLATION.md](INSTALLATION.md)** for installation instructions.
+
+## Screenshots
+
+### Visualize
+
+![Visualize](screenshots/visualize.png)
+
+### Convert to Type
+
+![Convert to Type](screenshots/convert.png)
+
+---
 
 ## Features
 
