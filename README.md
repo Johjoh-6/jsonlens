@@ -14,7 +14,7 @@ JsonLens is built with **SwiftUI**, **AppKit**, and **SwiftData**. It includes a
 
 Download the latest version from the **GitHub Releases** page.
 
-➡️ **[Latest Release](releases/latest)**
+➡️ **[Latest Release](https://github.com/Johjoh-6/jsonlens/releases/latest)**
 
 ## Installation
 
@@ -193,7 +193,7 @@ Development is tracked through GitHub Issues.
 - [ ] Improve test coverage
 
 See all planned features:
-➡️ [Roadmap](issues?q=label%3Aroadmap)
+➡️ [Roadmap](https://github.com/Johjoh-6/jsonlens/issues?q=label%3Aroadmap)
 
 ## License
 
