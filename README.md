@@ -14,7 +14,7 @@ JsonLens is built with **SwiftUI**, **AppKit**, and **SwiftData**. It includes a
 
 Download the latest version from the **GitHub Releases** page.
 
-➡️ **[Latest Release](../../releases/latest)**
+➡️ **[Latest Release](releases/latest)**
 
 ## Installation
 
@@ -180,6 +180,20 @@ JsonLensUITests/            # XCTest UI tests
 - `JSONParser` is a hand-written parser that preserves object key order and reports exact parse locations.
 - `TypeModelBuilder` infers fields and nested types; each `CodeGenerating` implementation renders that shared type model for one language.
 - `CompareViewModel` uses `JSONDiffService` and parser-provided source lines to describe differences.
+
+## Roadmap
+
+Development is tracked through GitHub Issues.
+
+### Planned
+
+- [ ] Improve CSV export with nested object and array flattening
+- [ ] Add new languages for code generation
+- [ ] Improve JSON diff visualization
+- [ ] Improve test coverage
+
+See all planned features:
+➡️ [Roadmap](issues?q=label%3Aroadmap)
 
 ## License
 
